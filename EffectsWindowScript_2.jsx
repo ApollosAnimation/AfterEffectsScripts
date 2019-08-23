@@ -8,6 +8,10 @@ Place the EffectWindowScript.Jsx into your Script UI Panel Directory located in:
  The Script Should then be accessible through the menu:
  Window->EffectWindowScript.jsx
 
+
+
+
+
 or through:
 File->Scripts->Run Script File...
 and then browsing to the Script UI Panel Directory
