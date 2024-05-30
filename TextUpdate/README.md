@@ -1,0 +1,1 @@
+This file contains work from Parsing CSV sourced from IdGoodies on github found here: https://github.com/indiscripts/IdGoodies/blob/master/snip/FileParseCSV.jsx Thanks IdGoodies for making this possible.
