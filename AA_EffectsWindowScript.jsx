@@ -566,6 +566,26 @@ This should make a Floating Dockable UI
             bgLayer.Effects.addProperty("S_Blur");
             }
     }
+    function findItemWithType(itemName, itemType){//Returns null in Error or the first item in the project with the name itemName and the single itemType
+        var items = app.project.items;
+        for(i=1; i<items.length+1; i++){
+            if(items[i] instanceof itemType && items[i].name == itemName){
+                return items[i];
+            }
+        }
+    return null;
+    }
+    function findAddFolder(folderName, parentFolderName){//Returns null if no folder found, or folder in project; if no folder with that name is found, create a folder and set its parent; Default parentFolderName: null
+        var items = app.project.items;
+        var folder = null;
+        for(i=1; i<items.length+1; i++){
+            if (items[i].name == folderName){folder = items[i];}
+                }
+        if (folder == null){folder = app.project.items.addFolder(folderName);}
+        parentFolderName= (parentFolderName != undefined) ? parentFolderName : null;
+        if (parentFolderName != null){folder.parentFolder = findAddFolder(parentFolderName);}
+        return folder;
+        }
     function canWriteFiles() {// Returns True or false; Script found online https://community.adobe.com/t5/after-effects-discussions/how-can-i-check-whether-if-quot-allow-scripts-to-write-files-and-access-network-quot-is-enable-using/m-p/10869640
         var appVersion, commandID, scriptName, tabName;
         appVersion = parseFloat(app.version);
