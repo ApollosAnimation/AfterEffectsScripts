@@ -477,7 +477,7 @@ This should make a Floating Dockable UI
         app.beginUndoGroup("checkLayerForNewPSDs");
         var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
         var layers = (Array.isArray(layers))? layers
-                : (((layers != undefined)|(layers != null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
+                : (((layers == undefined)|(layers == null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
                 : null;
         if ((layers == undefined)|(layers == null)){return null;}
         var changedLayers = new Array;
