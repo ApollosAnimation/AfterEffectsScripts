@@ -248,7 +248,7 @@ makeTemplateRevisionPanel(this)
             var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
             //var layers = ((layers != undefined)|(layers != null)) ? layers : app.project.activeItem;
             var layers = (Array.isArray(layers))? layers
-                    : (((fixExpressions != undefined)|(fixExpressions != null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
+                    : (((layers != undefined)|(layers != null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
                     : null;
             if ((layers == undefined)|(layers == null)){return null;}
             var changedLayers = new Array;

@@ -477,7 +477,7 @@ This should make a Floating Dockable UI
         app.beginUndoGroup("checkLayerForNewPSDs");
         var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
         var layers = (Array.isArray(layers))? layers
-                : (((fixExpressions != undefined)|(fixExpressions != null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
+                : (((layers != undefined)|(layers != null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
                 : null;
         if ((layers == undefined)|(layers == null)){return null;}
         var changedLayers = new Array;
@@ -892,6 +892,7 @@ This should make a Floating Dockable UI
          layerColumn01.add("Button",undefined ,"Add Time Remap").onClick = function(){toggleTimeRemap()};
          layerColumn01.add("Button",undefined ,"Match Width").onClick = function(){matchCompSize(0)};
          layerColumn01.add("Button",undefined ,"Match Length").onClick = function(){matchCompSize(1)};
+         layerColumn01.add("Button",undefined ,"Check for PSDs").onClick = function(){checkLayerForNewPSDs(null, false)};
 
          var layerColumn02 = layersTab.add("Group",undefined);
          layerColumn02.alignment = ['left','top'];
