@@ -177,7 +177,8 @@ makeTemplateRevisionPanel(this)
             var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
             var compArray = ((compArray != undefined)|(compArray != null)) ? compArray
                 : (app.project.activeItem instanceof CompItem) ? [app.project.activeItem]
-                : return null;
+                : null;
+            if(compArray == null){return null;}
             for (var i=0; i<=compArray.length-1; i++){
                 var comp = compArray[i];
                 if (comp.numLayers ==0){continue;}
@@ -223,7 +224,8 @@ makeTemplateRevisionPanel(this)
             var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
             var compArray = ((compArray != undefined)|(compArray != null)) ? compArray
                 : (app.project.activeItem instanceof CompItem) ? [app.project.activeItem]
-                : return null;
+                : null;
+            if(compArray == null){return null;}
             for (var i=0; i<=compArray.length-1; i++){
                 var comp = compArray[i];
                 if (comp.numLayers ==0){continue;}
