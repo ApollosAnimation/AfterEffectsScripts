@@ -54,11 +54,12 @@ This should make a Floating Dockable UI
                 addedEffect.property("Edge Intensity").setValue(0);
                 addedEffect.property("Edge Thickness").setValue(0);
                 addedEffect.property("Width").setValue(20);
-                addedEffect.property("Sweep Intensity").setValue(400);
-                addedEffect.property("Light Reception").setValue(3);
+                addedEffect.property("Sweep Intensity").setValue(200);
+                addedEffect.property("Light Reception").setValue(2);
+                addedEffect.property("Light Color").setValue([.96, .76, .38, 1]);
                 //alert(effectsGroup[i].Position.value);
                 position1 = effectsGroup[i].Position.value;
-                addedEffect.property("Center").setValuesAtTimes([1,2],[[position1[0],position1[1]],[position1[0]+100,position1[1]]]);
+                addedEffect.property("Center").setValuesAtTimes([app.project.activeItem.time,app.project.activeItem.time +1],[[position1[0],position1[1]],[position1[0]+100,position1[1]]]);
                  addedEffect.property("Center").expression = 'if(time<effect("CC Light Sweep")(1).key(1).time){loopIn("offset")}else{loopOut("offset")};';
                 //alert(addedEffect.property("Center").canSetExpression);
                 for (j=1; j<=addedEffect.numProperties;j++){
@@ -70,7 +71,39 @@ This should make a Floating Dockable UI
         }
         app.endUndoGroup();
     }
-
+    function addFlipTransform(){//base Effect Adding Function, used for most layer effects
+        app.beginUndoGroup("Add Transform Flip");
+        if(app.project.activeItem == null){
+                alert("Please select a comp and layer");
+                return false;
+            }
+        var addedEffectsGroup = [];
+        var effectsGroup = app.project.activeItem.selectedLayers;
+        for (i=0; i<=effectsGroup.length; i++){
+            if(isValid(effectsGroup[i])== true){
+                addedEffect = effectsGroup[i].Effects.addProperty("ADBE Geometry2");
+                //alert(addedEffect.numProperties);
+                //alert(addedEffect.property("Edge Intensity").value);
+                addedEffect.property("Uniform Scale").setValue(false);
+                addedEffect.property(5).setValue(-100);
+                //addedEffect.property("Width").setValue(20);
+                //addedEffect.property("Sweep Intensity").setValue(200);
+                //addedEffect.property("Light Reception").setValue(2);
+                //addedEffect.property("Light Color").setValue([.96, .76, .38, 1]);
+                //alert(effectsGroup[i].Position.value);
+                //position1 = effectsGroup[i].Position.value;
+                //addedEffect.property("Center").setValuesAtTimes([app.project.activeItem.time,app.project.activeItem.time +1],[[position1[0],position1[1]],[position1[0]+100,position1[1]]]);
+                 //addedEffect.property("Center").expression = 'if(time<effect("CC Light Sweep")(1).key(1).time){loopIn("offset")}else{loopOut("offset")};';
+                //alert(addedEffect.property("Center").canSetExpression);
+                for (j=1; j<=addedEffect.numProperties;j++){
+                        //alert(addedEffect.property(j).name);
+                    }
+                //reflectAll (addedEffect);
+                addedEffectsGroup.push(addedEffect);
+            }
+        }
+        app.endUndoGroup();
+    }
     function addEffectReturn(effectAEName){//base Effect Adding Function, used for most layer effects, but with no undo function so that an undo can be done without effecting the return variable
         var addedEffectsGroup = [];
         var effectsGroup = app.project.activeItem.selectedLayers;
@@ -116,6 +149,7 @@ This should make a Floating Dockable UI
 
     function addNull(){//Make a Null Layer
         app.beginUndoGroup("Add Null");
+        /*
         var movementLayer = app.project.activeItem.selectedLayers;
         var theComp = app.project.activeItem
         var newNull = theComp.layers.addNull()
@@ -123,6 +157,19 @@ This should make a Floating Dockable UI
         //newNull.name = "Null"
         if(isValid(movementLayer[0])== true){
             newNull.moveBefore(movementLayer[0]);
+            }
+            */
+        var comp = app.project.activeItem;
+        if (!(comp instanceof CompItem)){return null;}
+        var selLayers = comp.selectedLayers;
+        var nullFootage = findFootage("Null 1");
+        for (var i = 0; i < selLayers.length; i++){
+            var nullLayer = null;
+            if (nullFootage == null){var tempNullLayer = comp.layers.addNull(); nullFootage = findFootage("Null 1"); tempNullLayer.remove();}
+            nullLayer = comp.layers.add(nullFootage);
+            nullLayer.moveBefore(selLayers[i]);
+            nullLayer.adjustmentLayer = true;
+            nullLayer.property("Transform").property("Opacity").setValue(0);
             }
         app.endUndoGroup();
         }
@@ -512,6 +559,17 @@ This should make a Floating Dockable UI
         }
     return null;    
     }
+    function findFootage(footageName){//Returns null in Error / the first item in the project with the name footageName that is an instanceof FootageItem
+        var items = app.project.items;
+        for(i=1; i<items.length+1; i++){
+            var curItem = items[i];
+            if(curItem instanceof FootageItem && curItem.name == footageName){ //Will grab only the first name match
+                return curItem;
+            }
+        }
+    //alert("Footage Not Found: "+footageName);
+    return null;
+    }
     function stillToPSDComp(item){//Return null in error/ the imported Psd Comp
         var itemPreCompName =  String(item.name).slice(0,-4)+"_preComp";
         if (findComp(itemPreCompName) != null){return findComp(itemPreCompName);}
@@ -586,6 +644,55 @@ This should make a Floating Dockable UI
         if (parentFolderName != null){folder.parentFolder = findAddFolder(parentFolderName);}
         return folder;
         }
+    function createActiveBannerArea(){
+        app.beginUndoGroup("BannerArea");
+        var comp = app.project.activeItem;
+        if (!(comp instanceof CompItem)){return null;}
+        findAddBannerArea(comp);
+        app.endUndoGroup();
+        }
+    function findAddBannerArea(comp){//Returns null in Error / new or current layer named BannerMatteLayer
+            var comp = ((comp != undefined)|(comp != null)) ? comp : app.project.activeItem; if (!(comp instanceof CompItem)){return null;}
+            var matteLayer = findLayer(comp, "BannerMatteLayer");
+            if (matteLayer != null) {return matteLayer;}
+            var bannerHeightRatio = 240/1080;
+            var bannerWidth = Math.floor(comp.width);
+            var bannerHeight = Math.floor(comp.height * bannerHeightRatio);
+            var blurLayer = createRectangleShapeLayer(comp, comp.width, comp.height, [1,1,1,1]);
+            blurLayer.name = "BannerBlurLayer";
+            blurLayer.adjustmentLayer = true;
+            var blurEffect = blurLayer.Effects.addProperty("S_Blur");
+            //blurEffect.property("Blur Amount").setValue(30);
+            var colorLayer = createRectangleShapeLayer(comp, comp.width, comp.height, [0,0,0,1]);
+            colorLayer.name = "BannerColorLayer";
+            colorLayer.property("Opacity").setValue(20);
+            var matteLayer = createRectangleShapeLayer(comp, bannerWidth, bannerHeight, [1,1,1,1]);
+            matteLayer.name = "BannerMatteLayer";
+            blurLayer.setTrackMatte(matteLayer, TrackMatteType.ALPHA);
+            colorLayer.setTrackMatte(matteLayer, TrackMatteType.ALPHA);
+            var bannerPosHeight = Math.floor(comp.height-(bannerHeight*.5) - (comp.height*.08));
+            var bannerPosWidth = Math.floor(comp.width/2);
+            matteLayer.property("Position").setValue([bannerPosWidth,bannerPosHeight]);
+            return matteLayer;
+            }
+        function createRectangleShapeLayer (comp, width, height, fillCollor) {//Returns null in Error / new Shape Layer, Default Comp:Active Item, Color:[1,1,1,1]; need Width, Height, Color Array[1,1,1,1]
+            var comp = ((comp != undefined)|(comp != null)) ? comp : app.project.activeItem;if (!(comp instanceof CompItem)){return null;}
+            var fillCollor = ((fillCollor != undefined)|(fillCollor != null)) ? fillCollor : [1,1,1,1];
+            var shapeLayer = comp.layers.addShape();
+            var shapeBounds = shapeLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Shape - Rect");
+            shapeBounds.property("ADBE Vector Rect Size").setValue([width,height]);
+            var fill = shapeLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Graphic - Fill");
+            fill.property("ADBE Vector Fill Color").setValue(fillCollor);
+            return shapeLayer;
+            }
+        function findLayer(comp, layerName){//Returns  null in error/ the layer with the name of footageName(String), or the layer with the name of footageName with _preComp
+            if (!(comp instanceof CompItem)) {return null;}
+            for (var i = 1; i<= comp.numLayers; i++){
+                if (comp.layers[i].name == layerName){return comp.layers[i];}
+                if (comp.layers[i].name == layerName+"_preComp"){return comp.layers[i];}
+                }
+            return null;
+            }
     function canWriteFiles() {// Returns True or false; Script found online https://community.adobe.com/t5/after-effects-discussions/how-can-i-check-whether-if-quot-allow-scripts-to-write-files-and-access-network-quot-is-enable-using/m-p/10869640
         var appVersion, commandID, scriptName, tabName;
         appVersion = parseFloat(app.version);
@@ -869,31 +976,36 @@ This should make a Floating Dockable UI
          fontsTab.orientation = 'row';
 
          var effectsColumn01 = basicEffectsTab.add("Group",undefined,{orientation: 'column', alignment:['left','top']});
+         effectsColumn01.alignment = ['left','top'];
          effectsColumn01.orientation = 'column';
-         effectsColumn01.add("Button",undefined ,"Add Gaus").onClick = function(){addEffect ("ADBE Gaussian Blur 2")};
+         effectsColumn01.add("Button",undefined ,"Add S_Blur").onClick = function(){addEffect ("S_Blur")};
          effectsColumn01.add("Button",undefined ,"Add HueSat").onClick = function(){addEffect ("ADBE HUE SATURATION")};
          effectsColumn01.add("Button",undefined ,"Add Fill").onClick = function(){addEffect ("ADBE Fill")};
          effectsColumn01.add("Button",undefined ,"Add DropShdw").onClick = function(){addEffect ("ADBE Drop Shadow")};
-         effectsColumn01.add("Button",undefined ,"Add S_Linear Wipe").onClick = function(){addEffect ("S_WipeLine")};
-         effectsColumn01.add("Button",undefined ,"Add Transform").onClick = function(){addEffect ("ADBE Geometry2")};
+         //effectsColumn01.add("Button",undefined ,"Add S_Linear Wipe").onClick = function(){addEffect ("S_WipeLine")};
+         effectsColumn01.add("Button",undefined ,"Add Flip Transform").onClick = function(){/*addEffect ("ADBE Geometry2")*/addFlipTransform();}
 
          var effectsColumn02 = basicEffectsTab.add("Group",undefined,{orientation: 'column', alignment:['left','top']});
+         effectsColumn02.alignment = ['left','top'];
          effectsColumn02.orientation = 'column';
          effectsColumn02.add("Button",undefined ,"Add Gradient").onClick = function(){addEffect ("ADBE Ramp")};
          effectsColumn02.add("Button",undefined ,"Add LightSweep").onClick = function(){addLightSweep()};
-         effectsColumn02.add("Button",undefined ,"Add Glow").onClick = function(){addEffect ("ADBE Glo2")};
+         //effectsColumn02.add("Button",undefined ,"Add Glow").onClick = function(){addEffect ("ADBE Glo2")};
          effectsColumn02.add("Button",undefined ,"Add Simple Choker").onClick = function(){addEffect ("ADBE Simple Choker")};
-         effectsColumn02.add("Button",undefined ,"Add Luma Dissolve").onClick = function(){addEffect ("S_DissolveLuma")};
+         //effectsColumn02.add("Button",undefined ,"Add Luma Dissolve").onClick = function(){addEffect ("S_DissolveLuma")};
          effectsColumn02.add("Button",undefined ,"Add S_DropShdw").onClick = function(){addEffect ("S_DropShadow")};
 
          var transitionColumn01 = transitionEffectsTab.add("Group",undefined);
          transitionColumn01.alignment = ['left','top'];
          transitionColumn01.orientation = 'column';
-         transitionColumn01.add("Button",undefined ,"Add PageTurn").onClick = function(){addEffect ("CC Page Turn")};
-         transitionColumn01.add("Button",undefined ,"Add CardWipe").onClick = function(){addEffect ("APC CardWipeCam")};
+         //transitionColumn01.add("Button",undefined ,"Add PageTurn").onClick = function(){addEffect ("CC Page Turn")};
+         //transitionColumn01.add("Button",undefined ,"Add CardWipe").onClick = function(){addEffect ("APC CardWipeCam")};
          transitionColumn01.add("Button",undefined ,"Add RadialWipe").onClick = function(){addEffect ("ADBE Radial Wipe")};
-         transitionColumn01.add("Button",undefined ,"Add Luma Dissolve").onClick = function(){addEffect ("S_DissolveLuma")};
-         transitionColumn01.add("Button",undefined ,"Add Force Motion Blur").onClick = function(){addEffect ("CC Force Motion Blur")};
+         transitionColumn01.add("Button",undefined ,"Add S_Wipe Line").onClick = function(){addEffect ("S_WipeLine")};
+         transitionColumn01.add("Button",undefined ,"Add S_Wipe Circle").onClick = function(){addEffect ("S_WipeCircle")};
+         transitionColumn01.add("Button",undefined ,"Add S_Wipe Clock").onClick = function(){addEffect ("S_WipeClock")};
+         //transitionColumn01.add("Button",undefined ,"Add Luma Dissolve").onClick = function(){addEffect ("S_DissolveLuma")};
+         //transitionColumn01.add("Button",undefined ,"Add Force Motion Blur").onClick = function(){addEffect ("CC Force Motion Blur")};
 
          var transitionColumn02 = transitionEffectsTab.add("Group",undefined);
          transitionColumn02.alignment = ['left','top'];
@@ -909,10 +1021,11 @@ This should make a Floating Dockable UI
          layerColumn01.add("Button",undefined ,"Add Solid").onClick = function(){addSolid(0)};
          layerColumn01.add("Button",undefined ,"Add Null").onClick = function(){addNull()};
          layerColumn01.add("Button",undefined ,"Add Adjustments").onClick = function(){addSolid(1)};
-         layerColumn01.add("Button",undefined ,"Add Time Remap").onClick = function(){toggleTimeRemap()};
-         layerColumn01.add("Button",undefined ,"Match Width").onClick = function(){matchCompSize(0)};
-         layerColumn01.add("Button",undefined ,"Match Length").onClick = function(){matchCompSize(1)};
+         //layerColumn01.add("Button",undefined ,"Add Time Remap").onClick = function(){toggleTimeRemap()};
+         //layerColumn01.add("Button",undefined ,"Match Width").onClick = function(){matchCompSize(0)};
+         //layerColumn01.add("Button",undefined ,"Match Length").onClick = function(){matchCompSize(1)};
          layerColumn01.add("Button",undefined ,"Check for PSDs").onClick = function(){checkLayerForNewPSDs(null, false)};
+         layerColumn01.add("Button",undefined ,"Create Banner").onClick = function(){createActiveBannerArea()};
 
          var layerColumn02 = layersTab.add("Group",undefined);
          layerColumn02.alignment = ['left','top'];
@@ -1040,6 +1153,7 @@ This should make a Floating Dockable UI
             }
          var easeCheckbox = layerColumn03.add("checkbox",undefined ,"Continue Affect Keys");
          easeCheckbox.onClick = function(){easeAffectPreviousSelection=easeCheckbox.value};
+         /*
          var TestCheck = layerColumn03.add("button",undefined ,"testCheck");
          TestCheck.onClick = function(){
              easeSliderArea.maximumSize=[20,20];
@@ -1048,16 +1162,15 @@ This should make a Floating Dockable UI
              //easeSliderArea.remove(2);
              easeSliderArea.layout.layout(true);
              easeSliderArea.layout.resize(true);
-
              //layerColumn03.easeSliderArea.remove(3);
-
              }
+             */
 
 
          var layerColumn04 = layersTab.add("Group",undefined);
          layerColumn04.alignment = ['left','top'];
          layerColumn04.orientation = 'column';
-         layerColumn04.add("Button",undefined ,"Transform Drift").onClick = function(){addDrift(addEffectReturn("ADBE Geometry2"))};
+         //layerColumn04.add("Button",undefined ,"Transform Drift").onClick = function(){addDrift(addEffectReturn("ADBE Geometry2"))};
          layerColumn04.add("Button",undefined ,"Stagger Layers").onClick = function(){staggerLayers(0)};
          layerColumn04.add("Button",undefined ,"Stagger Working").onClick = function(){staggerLayers(1)};
          layerColumn04.add("Button",undefined ,"Fill Working").onClick = function(){staggerLayers(2)};
@@ -1087,7 +1200,7 @@ This should make a Floating Dockable UI
          fontColumn02.add("Button",undefined ,"Roboto").onClick = function(){changeFontType("fontRoboto")};
          fontColumn02.add("Button",undefined ,"Prox").onClick = function(){changeFontType("fontProx")};
          fontColumn02.add("Button",undefined ,"Mont").onClick = function(){changeFontType("fontMont")};
-         fontColumn02.add("Button",undefined ,"Test").onClick = function(){var selLayer = app.project.activeItem.selectedLayers[0].sourceText.value.fontObject;
+         fontColumn02.add("Button",undefined ,"Alert Font Name").onClick = function(){var selLayer = app.project.activeItem.selectedLayers[0].sourceText.value.fontObject;
              alert(selLayer.postScriptName);
              //reflectAll(selLayer)
              };
