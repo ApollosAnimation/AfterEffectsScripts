@@ -423,6 +423,7 @@ This should make a Floating Dockable UI
     }
 
     function staggerLayers(staggerType){
+        app.beginUndoGroup("Stagger Layer");
         var theComp = app.project.activeItem;
         var selLayers = theComp.selectedLayers;
         for (i=0; i<=selLayers.length; i++){
@@ -436,8 +437,8 @@ This should make a Floating Dockable UI
                         break;
                     case 1:
                         var layerLength = ((theComp.workAreaDuration)/(selLayers.length));
-                        selLayers[i].startTime = ((layerLength)*[i]+(theComp.workAreaStart));
-                        selLayers[i].outPoint = ((layerLength)+selLayers[i].startTime+(theComp.workAreaStart));
+                        selLayers[i].startTime = ((layerLength*[i])+(theComp.workAreaStart));
+                        selLayers[i].outPoint = ((layerLength)+selLayers[i].startTime);
                         break;
                     case 2:
                         selLayers[i].startTime = ((theComp.workAreaStart));
@@ -464,6 +465,7 @@ This should make a Floating Dockable UI
 					}
                 }
         }
+    app.endUndoGroup();
     }
     function testDistributeLayers(){
         var theComp = app.project.activeItem;
