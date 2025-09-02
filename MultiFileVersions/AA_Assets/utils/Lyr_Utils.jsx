@@ -1,6 +1,7 @@
-﻿var includedFiles = [ "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx"];
+﻿var includedFiles = [ "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx", "../utils/Comp_Utils.jsx"];
 var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
 var SystemUtils = $.global.AA_Scripts.SystemUtils;
+var CompUtils = $.global.AA_Scripts.CompUtils;
 $.global.AA_Scripts.LyrUtils = {};
 var LyrUtils = $.global.AA_Scripts.LyrUtils;
 
@@ -207,10 +208,9 @@ LyrUtils.matchCompSize =  function (matchDirectionIndex){
 }
 LyrUtils.checkLayerForNewPSDs = function (layers, fixExpressions){//Undoable; returns null in Error / the changed layers. Default fixExpressions:False layers: app.project.activeItem.selectedLayers, takes layers(Array) and tries seeing if they have psd's to replace with of the same name
     app.beginUndoGroup("checkLayerForNewPSDs");
-    var fixExpressions = ((fixExpressions != undefined)|(fixExpressions != null)) ? fixExpressions : false;
+    var fixExpressions = ((fixExpressions !== undefined)&&(fixExpressions !== null)) ? fixExpressions : false;
     var layers = (Object.prototype.toString.call(layers) === "[object Array]") ? layers
-            : (((layers == undefined)|(layers == null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers
-            : null;
+            : ((((layers == undefined)|(layers == null))&&(app.project.activeItem instanceof CompItem)) ? app.project.activeItem.selectedLayers: null);
     if ((layers == undefined)|(layers == null)){return null;}
     var changedLayers = new Array;
     for (var i = 0; i<layers.length; i++){
@@ -221,7 +221,7 @@ LyrUtils.checkLayerForNewPSDs = function (layers, fixExpressions){//Undoable; re
         if (compSource != null){layer.replaceSource(compSource, fixExpressions); changedLayers.push(layer); continue;}
         psdStill = this.stillToPSDComp(layer.source);
         if (psdStill == null){continue;}
-        this.addParalaxComp(psdStill);
+        CompUtils.addParalaxComp(psdStill);
         layer.replaceSource(psdStill, fixExpressions);
         changedLayers.push(layer);
         }
@@ -229,14 +229,58 @@ LyrUtils.checkLayerForNewPSDs = function (layers, fixExpressions){//Undoable; re
     return changedLayers;
     app.endUndoGroup();
 }
+LyrUtils.findLayersOfType= function (comp, itemType, exclusionTypes){//Returns null in Error / an Array of Layers, returns layers of the single item type that is not of the exclusionTypes(Array) in a comp
+    if (!(comp instanceof CompItem)) {return null;}
+    var layers = new Array;
+    for (var i = 1; i<= comp.numLayers; i++){
+        if (comp.layers[i] instanceof itemType){
+            if (exclusionTypes != null || exclusionTypes.length > 0){
+                var exclusionCheck = this.checkLayerIsNot(comp.layers[i], exclusionTypes);
+                if (exclusionCheck == true) {layers.push(comp.layers[i]);}
+                }
+            else{layers.push(comp.layers[i]);}
+            }
+        }
+    if (layers.length == 0) {return null;}
+    return layers;
+    }
+LyrUtils.checkLayerIsNot = function (layer, exclusionTypes){//Returns Bool, returns false if provided layer is one of the exclusionTypes(Array)
+    for (var i = 0; i<= exclusionTypes.length; i++){
+        //if (!(comp.layers[i] instanceof exclusionTypes[j]) && !(comp.layers[i].source instanceof exclusionTypes[j])){layers.push(comp.layers[i]);}
+        if (layer instanceof exclusionTypes[i]){return false;}
+        if (layer.source instanceof exclusionTypes[i]){return false;}
+        }
+    return true;
+    }
 LyrUtils.findLayer = function (comp, layerName){//Returns  null in error/ the layer with the name of footageName(String), or the layer with the name of footageName with _preComp
     if (!(comp instanceof CompItem)) {return null;}
+    if (layerName instanceof CompItem){layerName = layerName.name}
+    if (layerName.hasOwnProperty("source")&&(layerName.source instanceof CompItem ||layerName.source instanceof FootageItem)){layerName = layerName.name}
     for (var i = 1; i<= comp.numLayers; i++){
         if (comp.layers[i].name == layerName){return comp.layers[i];}
         if (comp.layers[i].name == layerName+"_preComp"){return comp.layers[i];}
         }
     return null;
 }
+LyrUtils.findAddLayer = function (comp, layerName){
+    var footageItem = ProjectUtils.findFootage(footageName);
+    if ((!(comp instanceof CompItem))|footageItem == null) {return null;}
+    var footageLayer = LyrUtils.findLayer(comp, footageName);
+    if (footageLayer != null) {return footageLayer};
+    footageLayer = comp.layers.add(footageItem);
+    return footageLayer;
+    }
+
+LyrUtils.findAddCompLayer = function (comp, footageName){//Returns  null in error/ the layer with the name of footageName(String) with _preComp, or just the footageName if no precomp is found
+            var footageItem = ProjectUtils.findCompFootage(footageName);
+            if ((!(comp instanceof CompItem))|footageItem == null) {return null;}
+            var footageLayer = this.findLayer(comp, footageName+"_preComp");
+            if (footageLayer != null) {return footageLayer};
+            footageLayer = this.findLayer(comp, footageName);
+            if (footageLayer != null) {return footageLayer};
+            footageLayer = comp.layers.add(footageItem);
+            return footageLayer;
+            }
 LyrUtils.stillToPSDComp = function (item){//Return null in error/ the imported Psd Comp
     var itemPreCompName =  String(item.name).slice(0,-4)+"_preComp";
     if (ProjectUtils.findComp(itemPreCompName) != null){return ProjectUtils.findComp(itemPreCompName);}
@@ -256,22 +300,6 @@ LyrUtils.stillToPSDComp = function (item){//Return null in error/ the imported P
         return psdImport;
         }
     return null;
-}
-LyrUtils.addParalaxComp = function (comp){//Returns null in error, reqires a comp, looks for layers "FG" and "BG", sets hard coded scaling to those 2 layers and adds a blur
-    if (!(comp instanceof CompItem)) {return null;}
-    var fgLayer = null, bgLayer = null;
-    for (var i = 1; i<= comp.numLayers; i++){
-        if (comp.layers[i].name == "FG"){fgLayer = comp.layers[i];}
-        if (comp.layers[i].name == "BG"){bgLayer = comp.layers[i];}
-        }
-    if (fgLayer == null | bgLayer == null){return null;}
-    if (fgLayer != null && bgLayer != null){
-        fgLayer.property("Scale").setValueAtTime(0, [100,100]);
-        fgLayer.property("Scale").setValueAtTime(5, [110,110]);
-        bgLayer.property("Scale").setValueAtTime(0, [100,100]);
-        bgLayer.property("Scale").setValueAtTime(5, [105,105]);
-        bgLayer.Effects.addProperty("S_Blur");
-    }
 }
 LyrUtils.addMarkers = function (inputText){//Returns null in error, reqires a comp, looks for layers "FG" and "BG", sets hard coded scaling to those 2 layers and adds a blur
     app.beginUndoGroup("Add Markers");
@@ -294,18 +322,60 @@ LyrUtils.addMarkers = function (inputText){//Returns null in error, reqires a co
            }
       app.endUndoGroup(); 
 }
-LyrUtils.duplicateSelectedLayer = function (duplicateValue, duplicateLayer){
+LyrUtils.duplicateSelectedLayers = function (duplicateValue, duplicateLayers){
     app.beginUndoGroup("duplicateSelectedLayer");
-    var duplicateLayer = ((textLayerGroup != undefined)|(textLayerGroup != null)) ? duplicateLayer : app.project.activeItem.selectedLayers[0];
-    for (i=0; i<duplicateValue; i++){
-        if(isValid(duplicateLayer)== false){
-        }else{
-            //alert(duplicateLayer.name);
-            duplicateLayer.duplicate()
+    var duplicateLayers = ((duplicateLayers !== undefined)&&(duplicateLayers !== null)) ? duplicateLayers : app.project.activeItem.selectedLayers;
+    if (!duplicateLayers){return null;}
+    var newLayers = [];
+    for (var i = 0; i < duplicateLayers.length; i++){
+        newLayers.push(this.duplicateLayer(duplicateValue, duplicateLayers[i]));
         }
-    }
+    return newLayers;
     app.endUndoGroup();
     }
+
+LyrUtils.duplicateLayer = function (duplicateValue, duplicateLayer){
+    var duplicateLayer = ((duplicateLayer !== undefined)&&(duplicateLayer !== null)) ? duplicateLayer : app.project.activeItem.selectedLayers[0];
+    if (!duplicateLayer){return null;}
+    var newLayers = [];
+    for (i=0; i<duplicateValue; i++){
+            newLayers.push(duplicateLayer.duplicate());
+        }
+    return newLayers;
+    }
+
+LyrUtils.layerScreenSize = function (layer){//Returns an Object with Height, Width, Top, Left, halfHeight, halfWidth. positionX, positionY; From given Layer (AVLayer, CompItem, ShapeLayer, Text), Returns Null if not the correct layer type
+    if (layer == null){return null;}
+    //var instanceTest = !((layer instanceof AVLayer)|(layer instanceof CompItem));
+    if (!((layer instanceof AVLayer)|(layer instanceof CompItem)|(layer instanceof ShapeLayer)|(layer instanceof TextLayer))){return null;}
+    //if(!((layer instanceof FootageItem)|(layer instanceof TextLayer)|(layer instanceof CompItem)|(layer instanceof AVLayer))){return null;}
+    var sizeRect;
+    if((layer instanceof FootageItem)|(layer instanceof TextLayer)|(layer instanceof AVLayer)|(layer instanceof ShapeLayer)){
+        sizeRect = resizeRectangle(layer.sourceRectAtTime(0, false), layer.property("Scale").value[0]*.01);
+        }
+    if(layer instanceof CompItem){
+        sizeRect = {
+            "width": layer.width,
+            "height": layer.height,
+            "top": 0,//Not sure what to calculate for a comp
+            "left": 0
+            }
+        resizeRectangle(sizeRect, layer.property("Scale").value[0]*.01)
+        }
+    if (sizeRect.width !=null) {sizeRect.halfWidth = sizeRect.width*.5; }
+    if (sizeRect.height !=null) {sizeRect.halfHeight = sizeRect.height*.5; }
+    sizeRect.positionX = layer.property("Position").value[0];
+    sizeRect.positionY = layer.property("Position").value[1];
+    return sizeRect;
+    }
+LyrUtils.resizeRectangle = function (rectangle, amount){//Returns Rectangle Object, changes  rectangle.height, rectangle.width, rectangle.top, rectangle.left, Multiplies by Amount
+    rectangle.height = rectangle.height * amount;
+    rectangle.width = rectangle.width * amount;
+    rectangle.top = rectangle.top * amount;
+    rectangle.left = rectangle.left * amount;
+    return rectangle;
+    }
+
 /*LyrUtils.addEffectReturn = function (effectAEName){//base Effect Adding Function, used for most layer effects, but with no undo function so that an undo can be done without effecting the return variable
     var addedEffectsGroup = [];
     var effectsGroup = app.project.activeItem.selectedLayers;

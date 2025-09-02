@@ -4,34 +4,36 @@ var LyrUtils = $.global.AA_Scripts.LyrUtils;
 $.global.AA_Scripts.TextLyrUtils = {};
 var TextLyrUtils = $.global.AA_Scripts.TextLyrUtils;
 
-TextLyrUtils.addTextAnim = function (easeType){//Adds text animation, based on which button is calling upon this function, It will either make the tet ease in, out, or smoothly transition, and add keyframes for quick access
+TextLyrUtils.addTextAnim = function (easeType, layers, timeStart, timeDuration){//Adds text animation, based on which button is calling upon this function, It will either make the tet ease in, out, or smoothly transition, and add keyframes for quick access
         app.beginUndoGroup("Add Text Anim");
             try{
+            var layers = ((layers !== undefined)&&(layers !== null)) ? layers : app.project.activeItem.selectedLayers;
             var textGroup = app.project.activeItem.selectedLayers;
             for (i=0; i<=((textGroup.length)-1); i++){//For Every Layer Selected
                 var newAnim = textGroup[i].Text.Animators.addProperty("ADBE Text Animator");//Add Animator
                 var newAnimSelector = newAnim.property("ADBE Text Selectors").addProperty("ADBE Text Selector");//Add standard range selector
-                var currentTime = app.project.activeItem.time;//Get Time
+                var timeStart = ((timeStart !== undefined)&&(timeStart !== null)) ? timeStart : app.project.activeItem.time;//Get Time
+                var timeDuration = ((timeDuration !== undefined)&&(timeDuration !== null)) ? timeDuration : 2;//Get Time
                 var easeShapeIndex=2;//Make Variable and Set Default for shape index
                 var easeMinVal=75;//Make Variable and Set Default for the Ease low
                 var easeMaxVal=-75;//Make Variable and Set Default for the ease high
-                var keyframeTimes = new Array((currentTime-1), (currentTime+1));//Make Variable and Set Default for the offset keyframes
+                var keyframeTimes = new Array( timeStart, (timeStart+timeDuration));//Make Variable and Set Default for the offset keyframes
                 var keyframeValues = new Array(-100, 100);//Make Variable and Set Default for the offset values
                 if(easeType=="Ramp Up"){//Customize variable per button push
                         easeShapeIndex=3;
                         easeMinVal=75;
                         easeMaxVal=-75;
-                        keyframeTimes = [(currentTime-1), (currentTime)]
+                        keyframeTimes = [(timeStart-1), (timeStart+timeDuration)]
                     }else if(easeType=="Ramp Down"){
                         easeShapeIndex=2;
                         easeMinVal=75;
                         easeMaxVal=-75;
-                        keyframeTimes = [(currentTime), (currentTime+1)]
+                        keyframeTimes = [(timeStart), (timeStart+timeDuration)]
                     }else if(easeType=="Smooth"){
                         easeShapeIndex=6;
                         easeMinVal=0;
                         easeMaxVal=0;
-                        keyframeTimes = [(currentTime), (currentTime+1)]
+                        keyframeTimes = [(timeStart-(timeDuration*.5)), (timeStart+(timeDuration*.5))]
                     }else{
                         alert("Shape request not detected");//should never be called without one of the 3 button types
                     }
@@ -285,9 +287,8 @@ TextLyrUtils.addLines = function (inputText, placementLayer){//Changes font, fon
     app.beginUndoGroup("addLines");
     try{
         var theComp = app.project.activeItem;
-        var placementLayer = ((placementLayer != undefined)|(placementLayer != null)) ? placementLayer : 
-            (theComp.selectedLayers.length > 0) ? theComp.selectedLayers[0] :
-            null;
+        var placementLayer = ((placementLayer !== undefined)&&(placementLayer !== null)) ? placementLayer : 
+            ((theComp.selectedLayers.length > 0) ? theComp.selectedLayers[0]:null);
         var inputArray = new Array;
         inputArray = inputText.split("\n\n");
         for (i =inputArray.length-1; i>=0; --i){
@@ -305,7 +306,7 @@ TextLyrUtils.addLines = function (inputText, placementLayer){//Changes font, fon
     
 TextLyrUtils.getLines = function (textLayerGroup){
     //app.beginUndoGroup("getLines");
-    var textLayerGroup = ((textLayerGroup != undefined)|(textLayerGroup != null)) ? textLayerGroup : app.project.activeItem.selectedLayers; 
+    var textLayerGroup = ((textLayerGroup !== undefined)&&(textLayerGroup !== null)) ? textLayerGroup : app.project.activeItem.selectedLayers; 
     var textSourceArray = new Array;
     for (i = 0; i<textLayerGroup.length; ++i){
             textSourceArray.push(textLayerGroup[i].property("Source Text").value);
@@ -317,15 +318,17 @@ TextLyrUtils.getLines = function (textLayerGroup){
     returnString = returnString.slice(0,returnString.length-2);
     return returnString;
     //app.endUndoGroup();
-    }   
+    }
+//TextLyrUtils.replaceLine = function (inputTextLayer, newText){
 TextLyrUtils.replaceLines = function (inputText, textLayerGroup){
     try{
-        var textLayerGroup = ((textLayerGroup != undefined)|(textLayerGroup != null)) ? textLayerGroup : app.project.activeItem.selectedLayers; 
-        inputArray = new Array;
+        var textLayerGroup = ((textLayerGroup !== undefined)&&(textLayerGroup !== null)) ? textLayerGroup : app.project.activeItem.selectedLayers; 
+        inputArray = [];
         inputArray = inputText.split("\n\n");
         for (i = 0; i<textLayerGroup.length; ++i){
             if (inputArray[i]!=undefined){
-                textLayerGroup[i].property("Source Text").setValue(inputArray[i]);
+                var newSourceText = inputArray[i].replace(/\\n/g, '\n');
+                textLayerGroup[i].property("Source Text").setValue(newSourceText);
                 }
             }
         inputArray.splice(0,textLayerGroup.length)
@@ -426,3 +429,34 @@ TextLyrUtils.updateTextLayer = function (compName, layerName, newTextValue, font
         }
     }
     }
+TextLyrUtils.findTextLayers = function (comp){
+    return LyrUtils.findLayersOfType (comp, TextLayer, null);
+    }
+TextLyrUtils.resizeTextLayer = function (textLayer, targetWidth, timeRef, growBool){//Returns null in error / size object of the text layer after resizing; with provided text layer, and desired width (default 85%), time Ref of size (default 0), and if you want it to grow(dafault no)
+    var targetWidth = ((targetWidth !== undefined)&&(targetWidth !== null)) ? targetWidth : textLayer.containingComp.width*.85; if ((targetWidth == undefined)|(targetWidth == null)){return null;}
+    var timeRef = ((timeRef !== undefined)&&(timeRef !== null)) ? timeRef : 0;
+    var growBool = ((growBool !== undefined)&&(growBool !== null)) ? growBool : false;
+    var textLayerProp = textLayer.property("Source Text");
+    var textLayerDoc = textLayerProp.value;
+    if (textLayer.sourceRectAtTime(timeRef, false).width < targetWidth && growBool){
+    while (textLayer.sourceRectAtTime(timeRef, false).width < targetWidth){
+        textLayerDoc.fontSize = textLayerDoc.fontSize +1;
+        textLayerProp.setValue(textLayerDoc);
+        }
+    }
+    if (textLayer.sourceRectAtTime(timeRef, false).width > targetWidth){
+    while (textLayer.sourceRectAtTime(timeRef, false).width > targetWidth){
+        textLayerDoc.fontSize = textLayerDoc.fontSize -1;
+        textLayerProp.setValue(textLayerDoc);
+        }
+    }
+    return layerScreenSize(textLayer);
+}
+TextLyrUtils.setTextFontSize = function (textLayer, fontSize){//Returns True/Null if the layer is a text layer, setting the layers font size
+            if (!(textLayer instanceof TextLayer)){return null;}
+            var textLayerProp = textLayer.property("Source Text");
+            var textLayerDoc = textLayerProp.value;
+            textLayerDoc.fontSize = fontSize;
+            textLayerProp.setValue(textLayerDoc);
+            return true;
+            }

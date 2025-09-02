@@ -1,4 +1,6 @@
-﻿$.global.AA_Scripts.CompUtils = {};
+﻿var includedFiles = ["../utils/Project_Utils.jsx"]
+var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
+$.global.AA_Scripts.CompUtils = {};
 var CompUtils = $.global.AA_Scripts.CompUtils;
 
 CompUtils.staggerLayers = function (staggerType, distributeTransition){
@@ -68,3 +70,61 @@ CompUtils.distributeLayers = function (){
         app.endUndoGroup();
     }
     */
+CompUtils.addParalaxComp = function (comp){//Returns null in error, reqires a comp, looks for layers "FG" and "BG", sets hard coded scaling to those 2 layers and adds a blur
+    if (!(comp instanceof CompItem)) {return null;}
+    var fgLayer = null, bgLayer = null;
+    for (var i = 1; i<= comp.numLayers; i++){
+        if (comp.layers[i].name == "FG"){fgLayer = comp.layers[i];}
+        if (comp.layers[i].name == "BG"){bgLayer = comp.layers[i];}
+        }
+    if (fgLayer == null | bgLayer == null){return null;}
+    if (fgLayer != null && bgLayer != null){
+        fgLayer.property("Scale").setValueAtTime(0, [100,100]);
+        fgLayer.property("Scale").setValueAtTime(5, [110,110]);
+        bgLayer.property("Scale").setValueAtTime(0, [100,100]);
+        bgLayer.property("Scale").setValueAtTime(5, [105,105]);
+        fgLayer.property("Scale").expression = 'loopOut("continue");';
+        bgLayer.property("Scale").expression = 'loopOut("continue");';
+        bgLayer.Effects.addProperty("S_Blur");
+    }
+}
+CompUtils.checkForNewPSDs = function (compArray, fixExpressions){//Return null in error, Default fixExpressions:False compArray:[app.project.activeItem], takes an array of comps, finds layers of stills, trys finding replacement _precomps or PSDs
+    var fixExpressions = ((fixExpressions !== undefined)&&(fixExpressions !== null)) ? fixExpressions : false;
+    var compArray = ProjectUtils.verifyInstanceOfArray(compArray, CompItem, [app.project.activeItem]);
+    if(compArray == null){return null;}
+    for (var i=0; i<=compArray.length-1; i++){
+        var comp = compArray[i];
+        if (comp.numLayers ==0){continue;}
+        var footageLayers = findLayersOfType(comp, AVLayer, [CompItem, TextLayer]);
+        if (footageLayers == null){continue;}
+        if (footageLayers.length > 0){
+            for (var j=0; j<=footageLayers.length-1; j++){
+                var compSource  = null; var psdStill = null;
+                compSource = findComp(footageLayers[j].name);
+                if (compSource == null){compSource = findComp(footageLayers[j].name+"_preComp");}
+                if (compSource != null){footageLayers[j].replaceSource(compSource, fixExpressions);}
+                psdStill = stillToPSDComp(footageLayers[j].source);
+                if (psdStill == null){continue;}
+                addParalaxComp(psdStill);
+                footageLayers[j].replaceSource(psdStill, fixExpressions);
+                }
+            }
+        } 
+    }
+CompUtils.checkLayerFunction = function (comp, layers, layersNeeded, funct, args){//in comp, what layers are we looking for to check, do those layers need to be there or need to not be there(bool), what function and what arguments for that function(Array); Ex: checkLayerFunction(comp, ["Fade In", "Fade Out"], false,addFadeBlack, [comp]);
+    if (!(comp instanceof CompItem)) {return null;}
+    var layerList = new Array;
+    for (var i = 0; i< layers.length; i++){
+     layerList.push(findLayer(comp,layers[i]));
+     }
+    var nullCheck = false;
+    for (var i = 0; i< layerList.length; i++){
+        if (layerList[i] == null){nullCheck = true;}
+        }
+    if (nullCheck == layersNeeded){return null;}
+    if (nullCheck != layersNeeded){
+    if (Array.isArray(args)){return funct.apply(null,args);}
+    return funct();
+    }
+    return null;
+    }

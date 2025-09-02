@@ -148,13 +148,15 @@ SystemUtils.parseCSV = function (/*str|File*/input,/*bool=0*/header,  r,i,s,a,m,
 	}
 }
 
-SystemUtils.altParseCSV = function (file){
+SystemUtils.altParseCSV = function (file, keepQuotesBool, escapeBool){
     if (!(file instanceof File) || !file.exists){throw new Error("Input is not a file or does not Exist");}
     file.open("r");
     var content = file.read();
     file.close();
+    if (keepQuotesBool != true) keepQuotesBool = false;
+    if (escapeBool != true) escapeBool = false;
     
-    content = this.standardizeQuotes(content);
+    content = this.standardizeQuotes(content, escapeBool);
     var rows = [];
     var row = [];
     var cell = "";
@@ -169,6 +171,7 @@ SystemUtils.altParseCSV = function (file){
                     i++;
                 }else{
                     insideQuotes = false;
+                    if (keepQuotesBool == true) cell += '"';
                 }
             }else{
                 cell+= character;
@@ -176,17 +179,18 @@ SystemUtils.altParseCSV = function (file){
             }else{
                 if (character === '"'){
                     insideQuotes = true;
+                    if (keepQuotesBool == true) cell += '"';
                 } else if (character === ','){
-                    row.push(cell);
+                    row.push(this.cleanCSVCellQuotes(cell, keepQuotesBool));
                     cell = "";
                 }else if (character === '\r' && content.charAt (i+1) === '\n'){
-                    row.push(cell);
+                    row.push(this.cleanCSVCellQuotes(cell, keepQuotesBool));
                     rows.push(row);
                     row = [];
                     cell = "";
                     i++
                 }else if (character === '\n' || character === '\r'){
-                    row.push(cell);
+                    row.push(this.cleanCSVCellQuotes(cell, keepQuotesBool));
                     rows.push(row);
                     row = [];
                     cell = "";
@@ -198,16 +202,40 @@ SystemUtils.altParseCSV = function (file){
             }
         
         if (cell !== "" || row.length>0){
-            row.push(cell);
+            row.push(this.cleanCSVCellQuotes(cell, keepQuotesBool));
             rows.push(row)
             }
         return rows;
     }
 
-SystemUtils.standardizeQuotes = function (str){
+SystemUtils.standardizeQuotes = function (str, escapeBool){
+    if (escapeBool != true) escapeBool = false;
+    if (escapeBool){
+        return str
+        .replace(/\u201C/g, '""')
+        .replace(/\u201D/g, '""') 
+        .replace(/\u2018/g, "''") 
+        .replace(/\u2019/g, "''");
+        }
     return str
         .replace(/\u201C/g, '"')
         .replace(/\u201D/g, '"') 
         .replace(/\u2018/g, "'") 
         .replace(/\u2019/g, "'");
+    }
+SystemUtils.csvNameToArray = function (fileName){//Returns an Array of the contents in the footage from the footage found with the fileName(String) name 
+    return this.altParseCSV(ProjectUtils.findFootage(fileName).file);
+    }
+SystemUtils.cleanCSVCellQuotes = function (cell, keepQuotesBool){
+    if (cell.charAt(0) === '"'&& cell.charAt(cell.length-1) === '"'){
+        cell = cell.substring(1, cell.length - 1);
+        }
+    cell=cell.replace(/""/g, '"');
+    return cell;
+    }
+SystemUtils.findSystemFolder = function (folderNameString, baseLocationString, searchParentFolderBool,nestedFolderName){
+    
+    }
+SystemUtils.findAddSystemFolder = function (folderNameString){
+    
     }

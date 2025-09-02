@@ -1,7 +1,8 @@
-﻿var includedFiles = [ "../utils/Lyr_Utils.jsx", "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx"];
+﻿var includedFiles = [ "../utils/Lyr_Utils.jsx", "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx", "../utils/TextLyr_Utils.jsx"];
 var LyrUtils = $.global.AA_Scripts.LyrUtils;
 var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
 var SystemUtils = $.global.AA_Scripts.SystemUtils;
+var TextLyrUtils = $.global.AA_Scripts.TextLyrUtils;
 
 $.global.AA_Scripts.TextUpdateFuncs = {};
 var TextUpdateFuncs = $.global.AA_Scripts.TextUpdateFuncs;
@@ -10,7 +11,7 @@ TextUpdateFuncs.updateText = function (textCsvFile, nameCsvFile, fontCsvFile){//
     app.beginUndoGroup("UpdateText");
     //aT();
     var textCSV = ProjectUtils.findFootage(textCsvFile).file;
-    var textArray = SystemUtils.altParseCSV(textCSV);
+    var textArray = SystemUtils.altParseCSV(textCSV, true, true);
     var nameCSV = ProjectUtils.findFootage(nameCsvFile).file;
     var nameArray = SystemUtils.altParseCSV(nameCSV);
     var fontCSV = ProjectUtils.findFootage(fontCsvFile).file;

@@ -1,5 +1,6 @@
-﻿var includedFiles = ["../utils/Lyr_Utils.jsx"];
+﻿var includedFiles = ["../utils/Lyr_Utils.jsx", "../utils/Project_Utils.jsx"];
 var LyrUtils = $.global.AA_Scripts.LyrUtils;
+var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
 
 if (!$.global.AA_Scripts) {$.global.AA_Scripts = {};}
 $.global.AA_Scripts.DuplicatorUI = {};
@@ -15,6 +16,7 @@ DuplicatorUI.buildPanel = function (windowObj){
      var duplicateColumn01 = duplicateTab.add("Group",undefined,{orientation: 'column', alignment:['left','top']});
      duplicateColumn01.orientation = 'column';
      var duplicateValue = duplicateColumn01.add('edittext{text:2, characters:4, justify:"center", active:true, enterKeySignalsOnChange:flase}');
-     duplicateColumn01.add("Button",undefined ,"Duplicate Sel Layer").onClick = function(){duplicateSelectedLayer (Number(duplicateValue.text))};
+     duplicateColumn01.add("Button",undefined ,"Duplicate Sel Layers").onClick = function(){LyrUtils.duplicateSelectedLayers(Number(duplicateValue.text), null)};
+     duplicateColumn01.add("Button",undefined ,"Duplicate Sel Items").onClick = function(){ProjectUtils.duplicateSelectedItems(Number(duplicateValue.text), null)};
     return myEffectsPanel;
     }
