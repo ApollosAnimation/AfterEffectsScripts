@@ -1,7 +1,8 @@
-﻿var includedFiles = [ "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx", "../utils/Comp_Utils.jsx"];
+﻿var includedFiles = [ "../utils/Project_Utils.jsx", "../utils/System_Utils.jsx", "../utils/Comp_Utils.jsx", "../utils/ExtendScript_Utils.jsx"];
 var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
 var SystemUtils = $.global.AA_Scripts.SystemUtils;
 var CompUtils = $.global.AA_Scripts.CompUtils;
+var ExtendScriptUtils = $.global.AA_Scripts.ExtendScriptUtils;
 $.global.AA_Scripts.LyrUtils = {};
 var LyrUtils = $.global.AA_Scripts.LyrUtils;
 
@@ -387,3 +388,18 @@ LyrUtils.resizeRectangle = function (rectangle, amount){//Returns Rectangle Obje
     }
     return addedEffectsGroup//Returning all effects that have been added in case Keys will be automatically applied to them in another function
 }*/
+LyrUtils.addScaleDrift = function (){//Function used to add keyframes to the Transform effect if the "Add Drift" Function is called
+    app.beginUndoGroup("Add Scale Drift");
+    var currentTime = app.project.activeItem.time;//Get Time
+    var scaleGroup = app.project.activeItem.selectedLayers;
+    for (i=0; i<=scaleGroup.length; i++){
+        if(isValid(scaleGroup[i])== true){
+            var scaleOrigin = scaleGroup[i].property("Scale").value;
+            var scaleOffset = ExtendScriptUtils.multiplyArray(scaleOrigin, 1.01);
+            scaleGroup[i].property("Scale").setValueAtTime(currentTime, scaleOrigin);
+            scaleGroup[i].property("Scale").setValueAtTime((currentTime+1), scaleOffset);
+            scaleGroup[i].property("Scale").expression = 'loopOut("continue");';
+        }
+    }
+    app.endUndoGroup();
+}

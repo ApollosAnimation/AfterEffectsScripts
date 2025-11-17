@@ -221,6 +221,7 @@ EffectsUI.buildPanel = function(windowObj){//Define Window to be built
          transitionCheckbox.value = EffectsVars.distributeTransition;
          transitionCheckbox.onClick = function(){EffectsVars.distributeTransition=transitionCheckbox.value};
          //layerColumn04.add("Button",undefined ,"Test Distribue").onClick = function(){testDistributeLayers()};
+         layerColumn04.add("Button",undefined ,"Scale Drift").onClick = function(){LyrUtils.addScaleDrift()};
 
          var fontColumn01 = fontsTab.add("Group",undefined);
          fontColumn01.alignment = ['left','top'];

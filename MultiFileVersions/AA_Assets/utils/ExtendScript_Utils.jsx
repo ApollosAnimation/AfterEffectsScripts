@@ -26,3 +26,10 @@ ExtendScriptUtils.trimString = function (string){
     string = string.replace(/^\s+/,'').replace(/\s+$/,'');
     return string;
     }
+ExtendScriptUtils.multiplyArray = function (array, multiplier){
+    var newArray = new Array ();
+    for (var i = 0; i < array.length; i++){
+        newArray.push(array[i]*multiplier);
+        }
+    return newArray;
+    }
