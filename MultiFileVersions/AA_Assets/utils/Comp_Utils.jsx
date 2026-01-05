@@ -85,7 +85,9 @@ CompUtils.addParalaxComp = function (comp){//Returns null in error, reqires a co
         bgLayer.property("Scale").setValueAtTime(5, [105,105]);
         fgLayer.property("Scale").expression = 'loopOut("continue");';
         bgLayer.property("Scale").expression = 'loopOut("continue");';
-        bgLayer.Effects.addProperty("S_Blur");
+        if(!(bgLayer.Effects.hasOwnProperty("S_Blur"))){
+            bgLayer.Effects.addProperty("S_Blur");
+            }
     }
 }
 CompUtils.checkForNewPSDs = function (compArray, fixExpressions){//Return null in error, Default fixExpressions:False compArray:[app.project.activeItem], takes an array of comps, finds layers of stills, trys finding replacement _precomps or PSDs
@@ -127,4 +129,15 @@ CompUtils.checkLayerFunction = function (comp, layers, layersNeeded, funct, args
     return funct();
     }
     return null;
+    }
+CompUtils.checkLayerNameUnique = function (comp, layerName){//Return True or False or Null, in comp, see if the string name is equal to any existing layer names
+    var comp = (comp instanceof CompItem) ? comp : app.project.activeItem;
+    if (!(comp instanceof CompItem)) {return null;}
+    if (!(typeof layerName === 'string')){return null;}
+    //$.writeln(typeof layerName === 'string');
+    var layers = comp.layers;
+    for (var i = 1; i<= layers.length; i++){
+        if (layers[i].name == layerName){$.writeln(false); return false;}
+        }
+    $.writeln(true); return true;
     }
