@@ -1,5 +1,6 @@
-﻿var includedFiles = ["../utils/Project_Utils.jsx"]
+﻿var includedFiles = ["../utils/Project_Utils.jsx", "../utils/ExtendScript_Utils.jsx"]
 var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
+var ExtendScriptUtils = $.global.AA_Scripts.ExtendScriptUtils;
 $.global.AA_Scripts.CompUtils = {};
 var CompUtils = $.global.AA_Scripts.CompUtils;
 
@@ -140,4 +141,99 @@ CompUtils.checkLayerNameUnique = function (comp, layerName){//Return True or Fal
         if (layers[i].name == layerName){$.writeln(false); return false;}
         }
     $.writeln(true); return true;
+    }
+CompUtils.checkLastSuffixNumberedLayer = function (comp, prefix){
+    var comp = (comp instanceof CompItem) ? comp : app.project.activeItem;
+    if (!(comp instanceof CompItem)) {return null;}
+    if (!(typeof prefix === 'string')){return null;}
+    var numberedNameRegex = new RegExp ("^"+prefix+"(\\d*)$");
+    var lastNumber = 0;
+    for (var i=1; i<=comp.numLayers; i++){
+        //$.writeln (comp.layer(i).name + " regex test :"+numberedNameRegex.test(comp.layer(i).name));
+        var currentLayer = comp.layer(i);
+        if(numberedNameRegex.test(comp.layer(i).name)){
+            //$.writeln (comp.layer(i).name + " regex test :"+numberedNameRegex.test(comp.layer(i).name));
+            //$.writeln ("regex test true");
+            var currentLayerNumber = numberedNameRegex.exec(comp.layer(i).name);
+            currentLayerNumber = parseInt (currentLayerNumber[1]);
+            if (currentLayerNumber >lastNumber){lastNumber = currentLayerNumber;}
+            }
+        }
+    return lastNumber;
+    }
+CompUtils.transferTransformGroupKeys = function (baseLayer, newLayer){
+    //$.writeln("Checking if provided are layers");
+    //$.writeln("base layer instanceof Layer check:" + ProjectUtils.verifyLayer(baseLayer));
+    //if ((baseLayer instanceof Layer)&&())
+    newLayer.inPoint = baseLayer.inPoint;
+    newLayer.outPoint = baseLayer.outPoint;
+    var properties = ["anchorPoint", "position", "scale", "rotation", "opacity"];
+    if (baseLayer.threeDLayer){properties = ["anchorPoint", "position", "scale", "rotation", "opacity", "Orientation", "X Rotation", "Y Rotation"];}
+    for (var i=0; i<properties.length; i++){
+        this.transferProperty(baseLayer(properties[i]), newLayer(properties[i]));
+        }
+    }
+CompUtils.transferProperty = function (baseProperty, newProperty){
+    //$.writeln(baseProperty.name + " number of Keys: "+ baseProperty.numKeys);
+    if(baseProperty.numKeys == 0){newProperty.setValue(baseProperty.value); return true;}
+    var baseExpressionState = baseProperty.expressionEnabled;
+    baseProperty.expressionEnabled = false;
+    for (var i=1; i<= baseProperty.numKeys; i++){
+        var newKeyframeIndex = newProperty.addKey(baseProperty.keyTime(i))
+        newProperty.setValueAtKey(newKeyframeIndex, baseProperty.keyValue(i));
+        if(baseProperty.keyTemporalAutoBezier(i)){newProperty.setTemporalAutoBezierAtKey(newKeyframeIndex, baseProperty.keyTemporalAutoBezier(i));}
+        if(baseProperty.keyTemporalContinuous(i)){newProperty.setTemporalContinuousAtKey(newKeyframeIndex, baseProperty.keyTemporalContinuous(i));}
+        if((baseProperty.propertyValueType ===PropertyValueType.TwoD_SPATIAL)||(baseProperty.propertyValueType ===PropertyValueType.ThreeD_SPATIAL)){
+            if (baseProperty.keySpatialAutoBezier(i)){newProperty.setSpatialAutoBezierAtKey(newKeyframeIndex, baseProperty.keySpatialAutoBezier(i));}
+            if(baseProperty.keySpatialContinuous(i)){newProperty.setSpatialContinuousAtKey(newKeyframeIndex, baseProperty.keySpatialContinuous(i));}
+            newProperty.setSpatialTangentsAtKey(newKeyframeIndex, baseProperty.keyInSpatialTangent(i), baseProperty.keyOutSpatialTangent(i));
+            }
+        if (newProperty.isInterpolationTypeValid(baseProperty.keyInInterpolationType(i))){newProperty.setInterpolationTypeAtKey(newKeyframeIndex, baseProperty.keyInInterpolationType(i), baseProperty.keyOutInterpolationType(i));}
+        var oldTempEaseIn = baseProperty.keyInTemporalEase(i)[0];
+        var oldTempEaseOut = baseProperty.keyOutTemporalEase(i)[0];
+        var newTempEaseIn = newProperty.keyInTemporalEase(newKeyframeIndex)[0];
+        var newTempEaseOut = newProperty.keyOutTemporalEase(newKeyframeIndex)[0];
+        if((baseProperty.keyInInterpolationType(i)!=KeyframeInterpolationType.LINEAR)||(baseProperty.keyOutInterpolationType(i)!=KeyframeInterpolationType.LINEAR))
+        if(baseProperty.keyInInterpolationType(i)==KeyframeInterpolationType.BEZIER){
+            newProperty.setTemporalEaseAtKey(newKeyframeIndex, baseProperty.keyInTemporalEase(i), newProperty.keyOutTemporalEase(newKeyframeIndex));
+            }
+        if(baseProperty.keyOutInterpolationType(i)==KeyframeInterpolationType.BEZIER){
+            newProperty.setTemporalEaseAtKey(newKeyframeIndex, newProperty.keyInTemporalEase(newKeyframeIndex), baseProperty.keyOutTemporalEase(i));
+            }
+        newProperty.setInterpolationTypeAtKey(newKeyframeIndex, baseProperty.keyInInterpolationType(i), baseProperty.keyOutInterpolationType(i));
+        }
+    if (baseExpressionState && newProperty.canSetExpression){
+        newProperty.expression = baseProperty.expression
+        }
+    baseProperty.expressionEnabled = baseExpressionState;
+    }
+CompUtils.alignLayerToParent = function (childLayer, parentLayer){
+    childLayer.inPoint = parentLayer.inPoint;
+    childLayer.outPoint = parentLayer.outPoint;
+    var properties = ["anchorPoint", "position", "scale", "rotation", "opacity"];
+    if (childLayer.threeDLayer){properties = ["anchorPoint", "position", "scale", "rotation", "opacity", "Orientation", "X Rotation", "Y Rotation"];}
+    for (var i=0; i<properties.length; i++){
+        if (childLayer(properties[i]).canSetExpression){childLayer(properties[i]).expressionEnabled = false}
+        var keysToRemove = childLayer(properties[i]).numKeys
+        //$.writeln("Number of Keys at the Begining for " + childLayer(properties[i]).name + ": " + childLayer(properties[i]).numKeys);
+        for (var j=keysToRemove; j>=1; j--){
+            //$.writeln("Removing Key Index: " + j + "of " + childLayer(properties[i]).numKeys);
+            childLayer(properties[i]).removeKey(j);
+            }
+        }
+    childLayer("anchorPoint").setValue([0,0]);
+    childLayer("position").setValue([0,0]);
+    childLayer("scale").setValue([100,100]);
+    childLayer("rotation").setValue(0);
+    if (childLayer.threeDLayer){
+        childLayer("Orientation").setValue([0,0]);
+        childLayer("X Rotation").setValue(0);
+        childLayer("Y Rotation").setValue(0);
+        }
+    childLayer("opacity").setValue(100);
+    if (childLayer("opacity").canSetExpression){
+        var opacityLinkExpression = 'thisComp.layer("' + parentLayer.name + '").transform.opacity';
+        childLayer("opacity").expression = opacityLinkExpression;
+        }
+    
     }

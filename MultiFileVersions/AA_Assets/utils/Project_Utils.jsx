@@ -111,6 +111,16 @@ ProjectUtils.findCompFootage = function (footageName){//Returns null in Error / 
     if (searchItem == null){searchItem = this.findItemWithType(footageName, FootageItem);}
     return searchItem;
     }
+ProjectUtils.verifyLayer = function (item){
+    return this.verifyInstanceOfList(item, [AVLayer, ShapeLayer, TextLayer, CameraLayer, LightLayer]);
+    }
+ProjectUtils.verifyInstanceOfList = function (item, typeItems){
+    var verifiedBool = false;
+    for (i=0; i<typeItems.length; i++){
+        if (item instanceof typeItems[i]){verifiedBool = true;}
+        }
+    return verifiedBool;
+    }
 ProjectUtils.verifyInstanceOf = function (item, typeItem, defaultReturn){
     if (item instanceof typeItem) return item;
     if (defaultReturn instanceof typeItem) return defaultReturn;

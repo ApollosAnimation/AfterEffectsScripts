@@ -67,10 +67,12 @@ EffectsUI.buildPanel = function(windowObj){//Define Window to be built
          layerColumn01.alignment = ['left','top'];
          layerColumn01.orientation = 'column';
          layerColumn01.add("Button",undefined ,"Add Solid").onClick = function(){ShapeLyrUtils.addSolid(0)};
-         layerColumn01.add("Button",undefined ,"Add Null").onClick = function(){ShapeLyrUtils.addNull()};
+         layerColumn01.add("Button",undefined ,"Add Null").onClick = function(){ShapeLyrUtils.addNullsToSelected()};
          layerColumn01.add("Button",undefined ,"Add Adjustments").onClick = function(){ShapeLyrUtils.addSolid(1)};
          layerColumn01.add("Button",undefined ,"Check for PSDs").onClick = function(){LyrUtils.checkLayerForNewPSDs(null, false)};
          layerColumn01.add("Button",undefined ,"Create Banner").onClick = function(){ShapeLyrUtils.createActiveBannerArea()};
+         layerColumn01.add("Button",undefined ,"Add Null to Layer").onClick = function(){EffectsFuncs.insertLayerNullParents(false)};
+         layerColumn01.add("Button",undefined ,"Transform to Null").onClick = function(){EffectsFuncs.insertLayerNullParents(true)};
 
          var layerColumn02 = layersTab.add("Group",undefined);
          layerColumn02.alignment = ['left','top'];

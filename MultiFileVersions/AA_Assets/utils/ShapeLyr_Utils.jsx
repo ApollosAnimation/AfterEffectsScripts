@@ -1,8 +1,9 @@
-﻿var includedFiles = ["../utils/Lyr_Utils.jsx", "../utils/Project_Utils.jsx",];
+﻿var includedFiles = ["../utils/Lyr_Utils.jsx", "../utils/Project_Utils.jsx", "../utils/Comp_Utils.jsx"];
 var LyrUtils = $.global.AA_Scripts.LyrUtils;
+var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
+var CompUtils = $.global.AA_Scripts.CompUtils;
 $.global.AA_Scripts.ShapeLyrUtils = {};
 var ShapeLyrUtils = $.global.AA_Scripts.ShapeLyrUtils;
-var ProjectUtils = $.global.AA_Scripts.ProjectUtils;
 
 ShapeLyrUtils.addSolid=function addSolid (adjustBool, comp){//Makes a Solid layer at 95% white briteness at 1920 x 10810 for 15 Seconds
     app.beginUndoGroup("Add Solid");
@@ -28,44 +29,100 @@ ShapeLyrUtils.addSolid=function addSolid (adjustBool, comp){//Makes a Solid laye
         }
     app.endUndoGroup();
     }
-ShapeLyrUtils.addNull=function addNull(comp){//Make a Null Layer
-    app.beginUndoGroup("Add Null");
+ShapeLyrUtils.addNullsToSelected=function addNullsToSelected(comp){//Make a Null Layer
+    app.beginUndoGroup("Add Nulls to Selected");
     var theComp = ProjectUtils.verifyInstanceOfCompActive(comp);
     if (!(theComp instanceof CompItem) || theComp == null){return null;}
     var selLayers = theComp.selectedLayers;
     var nullLayers = []
     //var nullFootage = findFootage("Null 1");
     for (var i = 0; i < selLayers.length; i++){
-        //var nullLayer = null;
-        //if (nullFootage == null){var tempNullLayer = comp.layers.addNull(); nullFootage = findFootage("Null 1"); tempNullLayer.remove();}
-        //nullLayer = comp.layers.add(nullFootage);
-        var nullLayer = theComp.layers.addShape();
-        nullLayer.label = 1;
-        var shapeBounds = nullLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Shape - Rect");
-        shapeBounds.property("ADBE Vector Rect Size").setValue([100,100]);
-        nullLayer.moveBefore(selLayers[i]);
-        nullLayer.guideLayer = true;
-         var nullLayerStroke = nullLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Graphic - Stroke");
-         nullLayerStroke.property("ADBE Vector Stroke Color").setValue([1, 0, 0,1]);
-         nullLayers.push(nullLayer)
-        //nullLayer.adjustmentLayer = true;
-        //nullLayer.property("Transform").property("Opacity").setValue(0);
+        var nullLayer = this.addNullToLayer(theComp, selLayers[i]);
+         nullLayers.push(nullLayer);
         }
     if (selLayers.length == 0) {
-        var nullLayer = theComp.layers.addShape();
-        nullLayer.label = 1;
-        var shapeBounds = nullLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Shape - Rect");
-        shapeBounds.property("ADBE Vector Rect Size").setValue([100,100]);
-         nullLayer.guideLayer = true;
-         var nullLayerStroke = nullLayer.property("ADBE Root Vectors Group").addProperty("ADBE Vector Graphic - Stroke");
-         nullLayerStroke.property("ADBE Vector Stroke Color").setValue([1, 0, 0,1]);
-         nullLayers.push(nullLayer)
-        //nullLayer.moveBefore(selLayers[i]);
-        //nullLayer.adjustmentLayer = true;
-        //nullLayer.property("Transform").property("Opacity").setValue(0);
+        var nullLayer = this.addNull();
+         nullLayers.push(nullLayer);
         }
     app.endUndoGroup();
     return nullLayers;
+    }
+ShapeLyrUtils.addNullToLayer=function addNullToLayer(comp, layer, transferTransformBool){
+    transferTransformBool= ((transferTransformBool == true)) ? transferTransformBool : false;
+    var nullLayer = this.addNull(comp);
+    nullLayer.moveBefore(layer);
+    //var compPos = 
+    //nullLayer.transform.position.setValue(compPos);
+    var originalParent = layer.parent;
+    nullLayer.parent = originalParent;
+    nullLayer.transform.position.setValue(layer.transform.position.value);
+    if (transferTransformBool){
+        CompUtils.transferTransformGroupKeys(layer,nullLayer);
+        var rectPath = nullLayer.property("ADBE Root Vectors Group").property("ADBE Vector Shape - Rect");
+        rectPath.property("ADBE Vector Rect Position").setValue([nullLayer.anchorPoint.value[0],nullLayer.anchorPoint.value[1]]);
+        layer.parent = nullLayer;
+        CompUtils.alignLayerToParent(layer,nullLayer);
+        }else{
+        nullLayer.inPoint = layer.inPoint;
+        nullLayer.outPoint = layer.outPoint;
+        var layerMarker = new MarkerValue("Parent Transform Sync Point");
+        nullLayer.marker.setValueAtTime(app.project.activeItem.time, layerMarker);
+        var properties = ["anchorPoint", "position", "scale", "rotation", "opacity"];
+        if (layer.threeDLayer){properties = ["anchorPoint", "position", "scale", "rotation", "opacity", "Orientation", "X Rotation", "Y Rotation"];}
+        for (var i=0; i<properties.length; i++){
+            nullLayer(properties[i]).setValue(layer(properties[i]).value);
+            }
+        var rectPath = nullLayer.property("ADBE Root Vectors Group").property("ADBE Vector Shape - Rect");
+        //$.writeln("nullLayer.anchorPoint.value: " + nullLayer.anchorPoint.value[0]);
+        rectPath.property("ADBE Vector Rect Position").setValue([nullLayer.anchorPoint.value[0],nullLayer.anchorPoint.value[1]]);
+        layer.parent = nullLayer;
+        }
+    
+    return nullLayer;
+    }
+ShapeLyrUtils.addNull=function addNull(comp, groupBool){
+    var groupBool = (groupBool == true)?true:false;
+    var nullLayer = comp.layers.addShape();
+    var baseGroup = nullLayer.property("ADBE Root Vectors Group");
+    nullLayer.label = 1;
+    if(groupBool){
+        baseGroup = baseGroup.addProperty("ADBE Vector Group");
+        baseGroup = baseGroup.property("ADBE Vectors Group");
+        }
+    var shapeBounds = baseGroup.addProperty("ADBE Vector Shape - Rect");
+    shapeBounds.property("ADBE Vector Rect Size").setValue([100,100]);
+    nullLayer.guideLayer = true;
+    var nullLayerStroke = baseGroup.addProperty("ADBE Vector Graphic - Stroke");
+    nullLayerStroke.property("ADBE Vector Stroke Color").setValue([1, 0, 0,1]);
+    return nullLayer;
+    }
+ShapeLyrUtils.alignNullToTextLayer=function (textLayer, nullLayer, groupedBool, expressionBool){
+    if (groupedBool == null){return false;}
+    var groupBool = (groupBool == true)?true:false;
+    if ((textLayer instanceof TextLayer)&&(groupedBool == false)){
+        var layerHalftime = ((textLayer.outPoint - textLayer.inPoint)*.5) + textLayer.inPoint;
+        var textRectangle = textLayer.sourceRectAtTime(layerHalftime,true);
+        if (groupedBool == true){
+            //not tested, mostly making this function with not grouped in mind but future proofing
+            var rectPath = nullLayer.property("ADBE Root Vectors Group").property("ADBE Root Vector Group").property("ADBE Root Vectors Group").property("ADBE Vector Shape - Rect");
+            }else{
+                var rectPath = nullLayer.property("ADBE Root Vectors Group").property("ADBE Vector Shape - Rect");
+                }
+        rectPath.property("ADBE Vector Rect Size").setValue([textRectangle.width,textRectangle.height]);
+        rectPath.property("ADBE Vector Rect Position").setValue([(textRectangle.width*.5)+textRectangle.left,(textRectangle.height*.5)+textRectangle.top]);
+        if (expressionBool){
+            var layerEffect = nullLayer.Effects.addProperty("ADBE Layer Control");
+            layerEffect.name = "nullLayerRef";
+            layerEffect.Layer.setValue(textLayer.index);
+            var timerEffect = nullLayer.Effects.addProperty("ADBE Slider Control");
+            timerEffect.name = "nullTimeRef";
+            timerEffect.Slider.setValue(layerHalftime);
+            rectPath.property("ADBE Vector Rect Size").expression = 'var layerRef = effect("nullLayerRef")("Layer")\nvar rectDimensions = layerRef.sourceRectAtTime(effect("nullTimeRef")("Slider"));\n[rectDimensions.width, rectDimensions.height]';
+            rectPath.property("ADBE Vector Rect Position").expression = 'var layerRef = effect("nullLayerRef")("Layer");\nvar rectDimensions = layerRef.sourceRectAtTime(effect("nullTimeRef")("Slider"));\n[(rectDimensions.width*.5)+rectDimensions.left,(rectDimensions.height*.5)+rectDimensions.top]';
+            }
+        return true;
+        }
+    return false;
     }
 ShapeLyrUtils.addFadeBlack=function addFadeBlack(){
     app.beginUndoGroup("AddFades");
