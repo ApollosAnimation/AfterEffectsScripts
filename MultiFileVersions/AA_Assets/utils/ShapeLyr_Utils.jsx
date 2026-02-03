@@ -29,15 +29,21 @@ ShapeLyrUtils.addSolid=function addSolid (adjustBool, comp){//Makes a Solid laye
         }
     app.endUndoGroup();
     }
-ShapeLyrUtils.addNullsToSelected=function addNullsToSelected(comp){//Make a Null Layer
+ShapeLyrUtils.addNullsToSelected=function addNullsToSelected(theComp, layerSpecific){//Make a Null Layer
     app.beginUndoGroup("Add Nulls to Selected");
-    var theComp = ProjectUtils.verifyInstanceOfCompActive(comp);
+    layerSpecific= ((layerSpecific == true)) ? layerSpecific : false;
+    var theComp = ProjectUtils.verifyInstanceOfCompActive(theComp);
     if (!(theComp instanceof CompItem) || theComp == null){return null;}
     var selLayers = theComp.selectedLayers;
     var nullLayers = []
     //var nullFootage = findFootage("Null 1");
     for (var i = 0; i < selLayers.length; i++){
-        var nullLayer = this.addNullToLayer(theComp, selLayers[i]);
+        if(layerSpecific){
+            var nullLayer = this.addNullToLayer(theComp, selLayers[i]);
+            }else{
+            var nullLayer = this.addNull(theComp);
+            nullLayer.moveBefore(selLayers[i]);
+            }
          nullLayers.push(nullLayer);
         }
     if (selLayers.length == 0) {
