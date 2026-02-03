@@ -47,7 +47,7 @@ ShapeLyrUtils.addNullsToSelected=function addNullsToSelected(theComp, layerSpeci
          nullLayers.push(nullLayer);
         }
     if (selLayers.length == 0) {
-        var nullLayer = this.addNull();
+        var nullLayer = this.addNull(theComp);
          nullLayers.push(nullLayer);
         }
     app.endUndoGroup();
