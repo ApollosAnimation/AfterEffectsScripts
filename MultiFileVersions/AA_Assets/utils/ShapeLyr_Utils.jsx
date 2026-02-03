@@ -59,6 +59,7 @@ ShapeLyrUtils.addNullToLayer=function addNullToLayer(comp, layer, transferTransf
     nullLayer.moveBefore(layer);
     //var compPos = 
     //nullLayer.transform.position.setValue(compPos);
+    nullLayer.threeDLayer = layer.threeDLayer;
     var originalParent = layer.parent;
     nullLayer.parent = originalParent;
     nullLayer.transform.position.setValue(layer.transform.position.value);
